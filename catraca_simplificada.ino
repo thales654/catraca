@@ -7,7 +7,20 @@
 
 MFRC522 mfrc522(SS_PIN, RST_PIN);               // Create MFRC522 instance.
 
-const String Versao          = "v0.5";          // Versão do Firmware
+#define COMMON_ANODE
+
+#ifdef  COMMON_ANODE
+#define LED_ON LOW
+#define LED_OFF HIGH
+#else
+#define LED_ON HIGH
+#define LED_OFF LOW
+#endif
+
+constexpr uint8_t redLed     = 10;   // Set Led Pins
+constexpr uint8_t greenLed   = 11;
+
+const String Versao          = "v0.6";          // Versão do Firmware
 
 const String UidCartaoMestre = "2D C3 76 89";   // UID do Cartao Mestre
 
@@ -42,6 +55,12 @@ byte size = sizeof(buffer);
 
 void setup()
 {
+  pinMode(redLed  , OUTPUT);
+  pinMode(greenLed, OUTPUT);
+
+  digitalWrite(redLed  , LED_OFF);              // Make sure led is off
+  digitalWrite(greenLed, LED_OFF);              // Make sure led is off
+
   Serial.begin(9600);                           // Inicia a serial
   SPI.begin();                                  // Inicia  SPI bus
   mfrc522.PCD_Init();                           // Inicia MFRC522
@@ -109,7 +128,7 @@ void loop()
     modoRecarga = true;
   }
 
-  if ((conteudo.substring(1) == UidUsuario1) && !modoRecarga)     //Usuario 1
+  if ((conteudo.substring(1) == UidUsuario1) && !modoRecarga)     // Usuario 1
   {
     Serial.print(F("Ola usuario, seu saldo é: R$ "));
     Serial.print(SaldoUsuario1);
@@ -121,12 +140,14 @@ void loop()
       Serial.print(F("Seu saldo agora é: R$ "));
       Serial.print(SaldoUsuario1);
       Serial.println("\n");
+      granted();                                                  // Acende o LED verde por 2 segundos
     } else {
       Serial.println("Saldo insuficiente.\n");
+      denied();                                                   // Acende o LED vermelho por 1 segundo
     }
   }
 
-  if ((conteudo.substring(1) == UidUsuario2) && !modoRecarga)     //Usuario 2
+  if ((conteudo.substring(1) == UidUsuario2) && !modoRecarga)     // Usuario 2
   {
     Serial.print(F("Ola usuario, seu saldo é: R$ "));
     Serial.print(SaldoUsuario2);
@@ -145,6 +166,7 @@ void loop()
 
   if ((conteudo.substring(1) == UidUsuario1) && modoRecarga)     //Usuario 1 -- Modo Recarga
   {
+    denied();
     Serial.print(F("Ola usuario, seu saldo é: R$ "));
     Serial.print(SaldoUsuario1);
     Serial.println("\n");
@@ -164,13 +186,15 @@ void loop()
       Serial.println(mfrc522.GetStatusCodeName(status));
       Serial.println("\nFalha na leitura do PICC. Repita o procedimento\n");
     }
-    for (byte i = 0; i < size; i++) {
+    /*for (byte i = 0; i < size; i++) {
       Serial.print(buffer[i]);
       Serial.print(" ");
-    }
+      }*/
     Serial.print(F("\nData in block ")); Serial.print(blockAddrDig); Serial.println(F(":"));
     dump_byte_array(buffer, 16); Serial.println();
     Serial.println();
+
+    granted();
   }
 
   if ((conteudo.substring(1) == UidUsuario2) && modoRecarga)     //Usuario 2 -- Modo Recarga
@@ -221,4 +245,20 @@ void dump_byte_array(byte *buffer, byte bufferSize) {
     Serial.print(buffer[i] < 0x10 ? " 0" : " ");
     Serial.print(buffer[i], HEX);
   }
+}
+
+/////////////////////////////////////////  Access Granted    ///////////////////////////////////
+void granted () {
+  digitalWrite(redLed, LED_OFF);                             // Turn off red LED
+  digitalWrite(greenLed, LED_ON);                            // Turn on green LED
+  delay(2000);                                               // Hold green LED on for a second
+  digitalWrite(greenLed, LED_OFF);
+}
+
+///////////////////////////////////////// Access Denied  ///////////////////////////////////
+void denied() {
+  digitalWrite(greenLed, LED_OFF);  // Make sure green LED is off
+  digitalWrite(redLed  , LED_ON);   // Turn on red LED
+  delay(2000);
+  digitalWrite(redLed  , LED_OFF);
 }
