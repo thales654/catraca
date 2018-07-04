@@ -20,7 +20,7 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);               // Create MFRC522 instance.
 constexpr uint8_t redLed     = 10;   // Set Led Pins
 constexpr uint8_t greenLed   = 11;
 
-const String Versao          = "v1.1";          // Versão do Firmware
+const String Versao          = "v1.2";          // Versão do Firmware
 
 const String UidCartaoMestre = "2D C3 76 89";   // UID do Cartao Mestre
 
@@ -160,12 +160,12 @@ void loop()
       Serial.print(F("MIFARE_Write() failed: "));
       Serial.println(mfrc522.GetStatusCodeName(status));
       Serial.println("\nFalha na escrita do novo saldo. Repita o procedimento\n");
+    } else {
+      modoRecarga   = false;
+      printaSaldo("Saldo atualizado: R$ ");
+
+      cycleLedGreen(5, 500);
     }
-
-    modoRecarga   = false;
-    printaSaldo("Saldo atualizado: R$ ");
-
-    granted();
   }
 
   delay(3000);
@@ -233,4 +233,13 @@ void denied() {
   digitalWrite(redLed  , LED_ON);   // Turn on red LED
   delay(2000);
   digitalWrite(redLed  , LED_OFF);
+}
+
+void cycleLedGreen(int n_cycles, int time_ms) {
+  for (int i = 0; i < n_cycles; i++) {
+    digitalWrite(greenLed, LED_ON);                               // Turn on green LED
+    delay(time_ms / 2);                                           // Hold green LED on
+    digitalWrite(greenLed, LED_OFF);                              // Turn off green LED
+    delay(time_ms / 2);                                           // Hold green LED off
+  }
 }
