@@ -243,4 +243,3 @@ void cycleLedGreen(int n_cycles, int time_ms) {
     delay(time_ms / 2);                                           // Hold green LED off
   }
 }
-
