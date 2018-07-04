@@ -20,14 +20,12 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);               // Create MFRC522 instance.
 constexpr uint8_t redLed     = 10;   // Set Led Pins
 constexpr uint8_t greenLed   = 11;
 
-const String Versao          = "v1.3";          // Versão do Firmware
+const String Versao          = "v1.4";          // Versão do Firmware
 
 const String UidCartaoMestre = "2D C3 76 89";   // UID do Cartao Mestre
 
 const String UidUsuario1     = "EA 30 B2 73";   // UID do Usuario 1
 const String UidUsuario2     = "F5 94 BF 65";   // UID do Usuario 2
-
-String CartaoAtual           = "00 00 00 00";
 
 bool modoRecarga             = false;
 
@@ -114,7 +112,6 @@ void loop()
     conteudo.concat(String(mfrc522.uid.uidByte[i], HEX));
   }
   conteudo.toUpperCase();
-  CartaoAtual = conteudo;
 
   if (conteudo.substring(1) == UidCartaoMestre) //Cartão mestre - Cobrador
   {
@@ -123,6 +120,12 @@ void loop()
     Serial.println("Aproxime o cartao do usuario para carrega-lo com R$ 10,00.");
     Serial.println();
     modoRecarga = true;
+    
+    cycleLed(2, 500, redLed);
+    cycleLed(3, 500, greenLed);
+    cycleLed(3, 500, redLed);
+    cycleLed(2, 500, greenLed);
+    
   } else if (!modoRecarga)                                       // Modo normal
   {
     printaSaldo("Ola usuario, seu saldo é: R$ ");
