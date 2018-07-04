@@ -7,7 +7,7 @@
 
 MFRC522 mfrc522(SS_PIN, RST_PIN);  // Create MFRC522 instance.
 
-const String Versao          = "v0.2";
+const String Versao          = "v0.3";
 
 const String UidCartaoMestre = "2D C3 76 89";
 
@@ -82,14 +82,15 @@ void loop()
       Serial.println("Acesso liberado!\n");
       SaldoUsuario1 = SaldoUsuario1 - 4.05;      
       Serial.print(F("Seu saldo agora é: R$ "));
-      Serial.print(SaldoUsuario2);
+      Serial.print(SaldoUsuario1);
       Serial.println("\n");
+      delay(3000);
+      return;
     }else{
       Serial.println("Saldo insuficiente.\n");
     }
 
     delay(3000);
-    return;
   }
 
   if ((conteudo.substring(1) == UidUsuario2) && !modoRecarga)     //Usuario 2
@@ -104,12 +105,13 @@ void loop()
       Serial.print(F("Seu saldo agora é: R$ "));
       Serial.print(SaldoUsuario2);
       Serial.println("\n");
+      delay(3000);
+      return;
     }else{
       Serial.println("Saldo insuficiente.\n");
     }
 
     delay(3000);
-    return;
   }
 
   if ((conteudo.substring(1) == UidUsuario1) && modoRecarga)     //Usuario 1 -- Modo Recarga
