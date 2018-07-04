@@ -20,7 +20,7 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);               // Create MFRC522 instance.
 constexpr uint8_t redLed     = 10;   // Set Led Pins
 constexpr uint8_t greenLed   = 11;
 
-const String Versao          = "v1.2";          // Versão do Firmware
+const String Versao          = "v1.3";          // Versão do Firmware
 
 const String UidCartaoMestre = "2D C3 76 89";   // UID do Cartao Mestre
 
@@ -144,11 +144,11 @@ void loop()
       granted();                                                  // Acende o LED verde por 2 segundos
     } else {
       Serial.println("Saldo insuficiente.\n");
-      denied();                                                   // Acende o LED vermelho por 2 segundos
+      cycleLed(7, 500, redLed);                                  // Acende o LED vermelho por 2 segundos
     }
   } else if (modoRecarga)                                         // Modo Recarga
   {
-    denied();
+    cycleLed(5, 500, redLed);
 
     printaSaldo("Ola usuario, seu saldo é: R$ ");
 
@@ -164,7 +164,7 @@ void loop()
       modoRecarga   = false;
       printaSaldo("Saldo atualizado: R$ ");
 
-      cycleLedGreen(5, 500);
+      cycleLed(5, 500, greenLed);
     }
   }
 
@@ -178,7 +178,11 @@ void loop()
 
 void printaSaldo(String mensagem) {
   Serial.print(mensagem);
-  Serial.print(dataBlock[0]); Serial.print("."); Serial.print(dataBlock[1]);
+  Serial.print(dataBlock[0]); Serial.print(".");
+  if (dataBlock[1] < 10) {
+    Serial.print(0);
+  }
+  Serial.print(dataBlock[1]);
   Serial.println("\n");
   return;
 }
@@ -202,8 +206,8 @@ bool cobraPassagem() {
     if (dataBlock[1] < 5) {
       return false;
     } else {
-      dataBlock[0] = dataBlock[0] - 5;
-      dataBlock[1] = dataBlock[1] + 95;
+      dataBlock[0] = dataBlock[0] - 4;
+      dataBlock[1] = dataBlock[1] - 5;
       return true;
     }
   }
@@ -235,11 +239,11 @@ void denied() {
   digitalWrite(redLed  , LED_OFF);
 }
 
-void cycleLedGreen(int n_cycles, int time_ms) {
+void cycleLed(int n_cycles, int time_ms, uint8_t LED) {
   for (int i = 0; i < n_cycles; i++) {
-    digitalWrite(greenLed, LED_ON);                               // Turn on green LED
-    delay(time_ms / 2);                                           // Hold green LED on
-    digitalWrite(greenLed, LED_OFF);                              // Turn off green LED
-    delay(time_ms / 2);                                           // Hold green LED off
+    digitalWrite(LED, LED_ON);                                    // Turn on LED
+    delay(time_ms / 2);                                           // Hold LED on
+    digitalWrite(LED, LED_OFF);                                   // Turn off green LED
+    delay(time_ms / 2);                                           // Hold LED off
   }
 }
