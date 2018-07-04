@@ -20,7 +20,7 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);               // Create MFRC522 instance.
 constexpr uint8_t redLed     = 10;   // Set Led Pins
 constexpr uint8_t greenLed   = 11;
 
-const String Versao          = "v0.6";          // Versão do Firmware
+const String Versao          = "v1.0";          // Versão do Firmware
 
 const String UidCartaoMestre = "2D C3 76 89";   // UID do Cartao Mestre
 
@@ -40,15 +40,11 @@ bool modoRecarga             = false;
 MFRC522::MIFARE_Key key;                        // Chave de autenticação MIFARE
 MFRC522::StatusCode status;                     // Status
 
-const byte sector         = 1;                  // Setor de leitura/escrita dos cartões
-const byte blockAddrDig   = 4;                  // Endereço do bloco de leitura/escrita do(s) digito(s) inteiro(s) do saldo
-const byte blockAddrDec   = 5;                  // Endereço do bloco de leitura/escrita do(s) digito(s) decimai(s) do saldo
-const byte trailerBlock   = 7;                  // Endereço do último bloco do setor 0, chamado de trailer
+const byte sector         = 1;                  // Setor de leitura/escrita do saldo dos cartões
+const byte blockAddr      = 4;                  // Endereço do bloco de leitura/escrita do saldo
+const byte trailerBlock   = 7;                  // Endereço do último bloco do setor 1, chamado de trailer
 
 byte dataBlock[16];                             // Vetor de dados a ser lidos/escritos no bloco de memória do cartão PICC
-
-byte valorDig             = 0;
-byte valorDec             = 0;
 
 byte buffer[18];
 byte size = sizeof(buffer);
@@ -62,7 +58,7 @@ void setup()
   digitalWrite(greenLed, LED_OFF);              // Make sure led is off
 
   Serial.begin(9600);                           // Inicia a serial
-  SPI.begin();                                  // Inicia  SPI bus
+  SPI.begin();                                  // Inicia SPI bus
   mfrc522.PCD_Init();                           // Inicia MFRC522
   Serial.print("Sistema de Catraca ");
   Serial.print(Versao);
@@ -76,9 +72,7 @@ void setup()
     key.keyByte[i] = 0xFF;
   }
 
-  dataBlock[0] = valorDig;
-  dataBlock[1] = valorDec;
-  for (byte i = 2; i < 16; i++) {
+  for (byte i = 0; i < 16; i++) {
     dataBlock[i] = 0x00;
   }
 }
@@ -102,6 +96,15 @@ void loop()
     Serial.print(F("PCD_Authenticate() failed: "));
     Serial.println(mfrc522.GetStatusCodeName(status));
     Serial.println("\nFalha na autenticação. Repita o procedimento\n");
+    return;
+  }
+
+  // Read data from the block
+  status = (MFRC522::StatusCode) mfrc522.MIFARE_Read(blockAddr, buffer, &size);
+  if (status != MFRC522::STATUS_OK) {
+    Serial.print(F("MIFARE_Read() failed: "));
+    Serial.println(mfrc522.GetStatusCodeName(status));
+    Serial.println("\nFalha na leitura do saldo. Repita o procedimento\n");
     return;
   }
 
@@ -130,20 +133,18 @@ void loop()
 
   if ((conteudo.substring(1) == UidUsuario1) && !modoRecarga)     // Usuario 1
   {
-    Serial.print(F("Ola usuario, seu saldo é: R$ "));
-    Serial.print(SaldoUsuario1);
-    Serial.println("\n");
+    printaSaldo("Ola usuario, seu saldo é: R$ ");
 
-    if (SaldoUsuario1 >= 4.05) {
+    bool saldoSuficiente = cobraPassagem();
+
+    if (saldoSuficiente) {
       Serial.println("Acesso liberado!\n");
-      SaldoUsuario1 = SaldoUsuario1 - 4.05;
-      Serial.print(F("Seu saldo agora é: R$ "));
-      Serial.print(SaldoUsuario1);
-      Serial.println("\n");
+      printaSaldo("Seu saldo agora é: R$ ");
+
       granted();                                                  // Acende o LED verde por 2 segundos
     } else {
       Serial.println("Saldo insuficiente.\n");
-      denied();                                                   // Acende o LED vermelho por 1 segundo
+      denied();                                                   // Acende o LED vermelho por 2 segundos
     }
   }
 
@@ -167,31 +168,24 @@ void loop()
   if ((conteudo.substring(1) == UidUsuario1) && modoRecarga)     //Usuario 1 -- Modo Recarga
   {
     denied();
-    Serial.print(F("Ola usuario, seu saldo é: R$ "));
-    Serial.print(SaldoUsuario1);
-    Serial.println("\n");
 
-    SaldoUsuario1 = SaldoUsuario1 + 10.0;
+    dataBlock[0] = buffer[0];
+    dataBlock[1] = buffer[1];
+
+    printaSaldo("Ola usuario, seu saldo é: R$ ");
+
+    dataBlock[0] = dataBlock[0] + 10;
+
     modoRecarga   = false;
-    Serial.print(F("Saldo atualizado: R$ "));
-    Serial.print(SaldoUsuario1);
-    Serial.println("\n");
+    printaSaldo("Saldo atualizado: R$ ");
 
-    // Read data from the block
-    Serial.print(F("Reading data from block ")); Serial.print(blockAddrDig);
-    Serial.println(F(" ..."));
-    status = (MFRC522::StatusCode) mfrc522.MIFARE_Read(blockAddrDig, buffer, &size);
+    // Write data to the block
+    status = (MFRC522::StatusCode) mfrc522.MIFARE_Write(blockAddr, dataBlock, 16);
     if (status != MFRC522::STATUS_OK) {
-      Serial.print(F("MIFARE_Read() failed: "));
+      Serial.print(F("MIFARE_Write() failed: "));
       Serial.println(mfrc522.GetStatusCodeName(status));
-      Serial.println("\nFalha na leitura do PICC. Repita o procedimento\n");
+      Serial.println("\nFalha na escrita do novo saldo. Repita o procedimento\n");
     }
-    /*for (byte i = 0; i < size; i++) {
-      Serial.print(buffer[i]);
-      Serial.print(" ");
-      }*/
-    Serial.print(F("\nData in block ")); Serial.print(blockAddrDig); Serial.println(F(":"));
-    dump_byte_array(buffer, 16); Serial.println();
     Serial.println();
 
     granted();
@@ -234,6 +228,39 @@ void carregaCartao(String UidUsuario)
     Serial.print(F("Saldo atualizado no cartao: R$ "));
     Serial.print(SaldoUsuario2);
     Serial.println();
+  }
+}
+
+void printaSaldo(String mensagem) {
+  Serial.print(mensagem);
+  Serial.print(dataBlock[0]); Serial.print("."); Serial.print(dataBlock[1]);
+  Serial.println("\n");
+  return;
+}
+
+bool cobraPassagem() {
+  if (dataBlock[0] < 4) {                                                             // Menos do que 4 reais de saldo
+    return false;
+  }
+  else if (dataBlock[0] > 4) {                                                        // Mais do que 4 reais de saldo
+    if (dataBlock[1] >= 5) {                                                          
+      dataBlock[0] = dataBlock[0] - 4;
+      dataBlock[1] = dataBlock[1] - 5;
+      return true;
+    } else {
+      dataBlock[0] = dataBlock[0] - 5;
+      dataBlock[1] = dataBlock[1] + 95;
+      return true;
+    }
+  }
+  else {                                                                              // Exatamente 4 reais de saldo
+    if (dataBlock[1] < 5) {
+      return false;
+    } else {
+      dataBlock[0] = dataBlock[0] - 5;
+      dataBlock[1] = dataBlock[1] + 95;
+      return true;
+    }
   }
 }
 
