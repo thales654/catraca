@@ -7,6 +7,8 @@
 
 MFRC522 mfrc522(SS_PIN, RST_PIN);  // Create MFRC522 instance.
 
+const String Versao          = "v0.2";
+
 const String UidCartaoMestre = "2D C3 76 89";
 
 const String UidUsuario1     = "EA 30 B2 73";
@@ -27,6 +29,9 @@ void setup()
   Serial.begin(9600); // Inicia a serial
   SPI.begin();    // Inicia  SPI bus
   mfrc522.PCD_Init(); // Inicia MFRC522
+  Serial.print("Sistema de Catraca ");
+  Serial.print(Versao);
+  Serial.println("\n");
   Serial.println("Aproxime o seu cartao do leitor...");
   Serial.println();
 }
