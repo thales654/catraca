@@ -20,7 +20,7 @@ MFRC522 mfrc522(SS_PIN, RST_PIN);               // Create MFRC522 instance.
 constexpr uint8_t redLed     = 10;   // Set Led Pins
 constexpr uint8_t greenLed   = 11;
 
-const String Versao          = "v1.4";          // Versão do Firmware
+const String Versao          = "v1.5";          // Versão do Firmware
 
 const String UidCartaoMestre = "2D C3 76 89";   // UID do Cartao Mestre
 
@@ -58,6 +58,9 @@ void setup()
   Serial.println("Aproxime o seu cartao do leitor...");
   Serial.println();
 
+  //Descontmentar para setar o ganho máximo na antena
+  //mfrc522.PCD_SetAntennaGain(mfrc522.RxGain_max);
+
   // Prepare the key (used both as key A and as key B)
   // using FFFFFFFFFFFFh which is the default at chip delivery from the factory
   for (byte i = 0; i < 6; i++) {
@@ -91,6 +94,20 @@ void loop()
     return;
   }
 
+  /*//Descomentar aqui para zerar o saldo dos cartoes
+  dataBlock[0] = 10;
+  status = (MFRC522::StatusCode) mfrc522.MIFARE_Write(blockAddr, dataBlock, 16);
+  if (status != MFRC522::STATUS_OK) {
+    Serial.print(F("MIFARE_Write() failed: "));
+    Serial.println(mfrc522.GetStatusCodeName(status));
+    Serial.println("\nFalha na escrita do novo saldo. Repita o procedimento\n");
+  } else {
+    modoRecarga   = false;
+    printaSaldo("Saldo atualizado: R$ ");
+
+    cycleLed(5, 500, greenLed);
+  }*/
+
   // Read data from the block
   status = (MFRC522::StatusCode) mfrc522.MIFARE_Read(blockAddr, buffer, &size);
   if (status != MFRC522::STATUS_OK) {
@@ -120,12 +137,12 @@ void loop()
     Serial.println("Aproxime o cartao do usuario para carrega-lo com R$ 10,00.");
     Serial.println();
     modoRecarga = true;
-    
+
     cycleLed(2, 500, redLed);
     cycleLed(3, 500, greenLed);
     cycleLed(3, 500, redLed);
     cycleLed(2, 500, greenLed);
-    
+
   } else if (!modoRecarga)                                       // Modo normal
   {
     printaSaldo("Ola usuario, seu saldo é: R$ ");
@@ -147,7 +164,7 @@ void loop()
       granted();                                                  // Acende o LED verde por 2 segundos
     } else {
       Serial.println("Saldo insuficiente.\n");
-      cycleLed(7, 500, redLed);                                  // Acende o LED vermelho por 2 segundos
+      cycleLed(7, 500, redLed);                                   // Acende o LED vermelho por 2 segundos
     }
   } else if (modoRecarga)                                         // Modo Recarga
   {
@@ -175,6 +192,7 @@ void loop()
 
   // Halt PICC
   mfrc522.PICC_HaltA();
+
   // Stop encryption on PCD
   mfrc522.PCD_StopCrypto1();
 }
